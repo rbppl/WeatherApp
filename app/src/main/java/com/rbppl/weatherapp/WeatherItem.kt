@@ -1,10 +1,11 @@
 package com.rbppl.weatherapp
-
 data class WeatherItem(
-    var date: String = "",
-    var condition: String = "",
-    var iconUrl: String = "",
-    var temperature: Double,
-    var windSpeed: Double,
-    var humidity: Double
+    val date: String,
+    val condition: String,
+    val iconUrl: String,
+    val temperature: Double,
+    val windSpeed: Double,
+    val humidity: Double,
+    val city: String,
+    val dayIndex: Int // Добавляем индекс дня
 )

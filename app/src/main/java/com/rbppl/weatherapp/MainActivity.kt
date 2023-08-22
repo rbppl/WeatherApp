@@ -1,6 +1,7 @@
 package com.rbppl.weatherapp
 
 import android.content.Context
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.text.Editable
@@ -19,6 +20,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var weatherAdapter: WeatherAdapter
     private val weatherItems = mutableListOf<WeatherItem>()
 
+    private val sharedPreferences by lazy { getSharedPreferences("MyPrefs", Context.MODE_PRIVATE) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -28,23 +31,29 @@ class MainActivity : AppCompatActivity() {
         binding.weatherRecyclerView.layoutManager = LinearLayoutManager(this)
         binding.weatherRecyclerView.adapter = weatherAdapter
 
+        val savedQuery = sharedPreferences.getString("savedQuery", "")
+        binding.searchEditText.setText(savedQuery)
+
+        if (savedQuery!!.isNotEmpty()) {
+            fetchWeatherData(savedQuery.toString())
+        }
+
         binding.searchEditText.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 if (s?.length ?: 0 >= 3) {
-                    if (isNetworkAvailable()) {
-                        fetchWeatherData(s.toString())
-                    } else {
-                        showNoInternetToast()
-                    }
+                    fetchWeatherData(s.toString())
                 }
             }
 
             override fun afterTextChanged(s: Editable?) {}
         })
-    }
 
+        if (!isNetworkAvailable()) {
+            Toast.makeText(this, "No internet connection available", Toast.LENGTH_SHORT).show()
+        }
+    }
     private fun fetchWeatherData(query: String) {
         val apiKey = getString(R.string.api_key)
         val url =
@@ -74,6 +83,7 @@ class MainActivity : AppCompatActivity() {
                 e.printStackTrace()
             }
         })
+        sharedPreferences.edit().putString("savedQuery", query).apply()
     }
 
     private fun parseCityName(responseData: String?): String {
@@ -101,8 +111,8 @@ class MainActivity : AppCompatActivity() {
 
         try {
             val jsonObject = JSONObject(responseData)
+            val locationObject = jsonObject.getJSONObject("location")
             val forecastArray = jsonObject.getJSONObject("forecast").getJSONArray("forecastday")
-
             for (i in 0 until forecastArray.length()) {
                 val forecast = forecastArray.getJSONObject(i)
                 val date = forecast.getString("date")
@@ -111,8 +121,8 @@ class MainActivity : AppCompatActivity() {
                 val temperature = forecast.getJSONObject("day").getDouble("avgtemp_c")
                 val windSpeed = forecast.getJSONObject("day").getDouble("maxwind_kph")
                 val humidity = forecast.getJSONObject("day").getDouble("avghumidity")
-
-                val weatherItem = WeatherItem(date, condition, iconUrl, temperature, windSpeed, humidity)
+                val city = locationObject.getString("name")
+                val weatherItem = WeatherItem(date, condition, iconUrl, temperature, windSpeed, humidity, city, i) // Передаем город
                 weatherItems.add(weatherItem)
             }
         } catch (e: Exception) {
@@ -121,13 +131,10 @@ class MainActivity : AppCompatActivity() {
 
         return weatherItems
     }
+
     private fun isNetworkAvailable(): Boolean {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkInfo = connectivityManager.activeNetworkInfo
-        return networkInfo != null && networkInfo.isConnected
-    }
-
-    private fun showNoInternetToast() {
-        Toast.makeText(this, "No Internet", Toast.LENGTH_SHORT).show()
+        val activeNetworkInfo = connectivityManager.activeNetworkInfo
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected
     }
 }

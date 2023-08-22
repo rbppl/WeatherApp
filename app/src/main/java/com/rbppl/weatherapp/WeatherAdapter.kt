@@ -1,5 +1,6 @@
 package com.rbppl.weatherapp
 import android.content.Context
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -24,6 +25,18 @@ class WeatherAdapter(private val context: Context, private val weatherItems: Lis
     }
 
     inner class ViewHolder(private val binding: ItemWeatherForecastBinding) : RecyclerView.ViewHolder(binding.root) {
+        init {
+            itemView.setOnClickListener {
+                val position = adapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    val item = weatherItems[position]
+                    val intent = Intent(context, WeatherDetailActivity::class.java)
+                    intent.putExtra("city", item.city)
+                    intent.putExtra("dayIndex", item.dayIndex) // Передаем индекс дня
+                    context.startActivity(intent)
+                }
+            }
+        }
         fun bind(weatherItem: WeatherItem) {
             binding.dateTextView.text = "Date: ${weatherItem.date}"
             binding.conditionTextView.text = "Condition: ${weatherItem.condition}"
